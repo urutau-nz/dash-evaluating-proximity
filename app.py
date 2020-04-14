@@ -18,11 +18,14 @@ amenities = ['hospital','supermarket','school','library']
 amenity_names = {'hospital':'Hospitals','school':'Schools','supermarket':'Supermarkets','library':'Libraries'}
 
 # app initialize
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
 app = dash.Dash(
     __name__,
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
     ],
+    external_stylesheets=external_stylesheets,
 )
 server = app.server
 app.config["suppress_callback_exceptions"] = True
@@ -74,12 +77,22 @@ def build_banner():
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
 
+def brush(trace, points, state):
+    inds = np.array(points.point_inds)
+    if inds.size:
+        selected = np.zeros(len(trace.x))
+        selected[inds] = 1
+        trace.marker.color = selected # now the trace marker color is a list of 0 and 1;
+                                      # we have 0 at the position of unselected
+                                      # points and 1 in the position of selected points
 
 def generate_ecdf_plot(amenity_select, x_range=None):
     """
     :param amenity_select: the amenity of interest.
     :return: Figure object
     """
+    amenity = amenity_select
+
     layout = dict(
         xaxis=dict(
             title="distance to nearest {} (km)".format(amenity_select).upper(),
@@ -94,18 +107,13 @@ def generate_ecdf_plot(amenity_select, x_range=None):
             ),
         font=dict(size=13),
         dragmode="select",
-        clickmode="select",
+        clickmode="event+select",
         paper_bgcolor = 'rgba(255,255,255,1)',
 		plot_bgcolor = 'rgba(0,0,0,0)',
 
     )
     dff = df_ecdf[df_ecdf.amenity==amenity]
     dff = dff[dff.distance < dff.distance.quantile(.9998)]
-    if x_range:
-        # get the indices of the values within the specified range
-        idx = dff.index[dff.distance.between(x_range[0],x_range[1], inclusive=True)].tolist()
-    else:
-        idx = dff.index.tolist()
 
     data = []
     # add the cdf for that amenity
@@ -117,12 +125,21 @@ def generate_ecdf_plot(amenity_select, x_range=None):
         marker_opacity=0.7,
         marker_size=1,
         hovermode='closest',
+        marker=dict(color=[colormap[amenity]]*len(dff)),
         hovertemplate = "%{y:.2f}% of residents live within %{x:.1f}km of a %{text} <br>" + "<extra></extra>",
         hoverlabel = dict(font_size=20),
-        line=dict(shape="spline", color=colormap[amenity]),
-        selectedpoints=idx,
+        # line=dict(shape="spline", color=colormap[amenity]),
+        # selectedpoints=idx,
     )
     data.append(new_trace)
+
+    # update color for selection
+    if x_range:
+        # get the indices of the values within the specified range
+        idx = np.where(dff.distance.between(x_range[0],x_range[1], inclusive=True))[0]
+        for i in idx:
+            data[0]['marker']['color'][i] = 'black'
+
     return {"data": data, "layout": layout}
 
 
@@ -242,7 +259,7 @@ app.layout = html.Div(
                         html.Div(
                             id="map-container",
                             children=[
-                                build_graph_title("Distance to nearest amenity"),
+                                build_graph_title("Explore how far people need to travel"),
                                 dcc.Graph(
                                     id="map",
                                     figure={
@@ -262,7 +279,7 @@ app.layout = html.Div(
                             id="ecdf-container",
                             className="six columns",
                             children=[
-                                build_graph_title("How fair is people's access and who has the worst?"),
+                                build_graph_title("Select to identify areas by their distance"),
                                 dcc.Graph(id="ecdf",
                                     figure={
                                         "layout": {
@@ -328,7 +345,10 @@ def update_map(
 
     if prop_id == 'ecdf' and prop_type == "selectedData":
         if ecdf_selectedData:
-            x_range = ecdf_selectedData['range']['x']
+            if 'range' in ecdf_selectedData:
+                x_range = ecdf_selectedData['range']['x']
+            else:
+                x_range = [ecdf_selectedData['points'][0]['x']]*2
 
     return generate_map(amenity_select, dff_dest, x_range=x_range)
 
@@ -341,7 +361,7 @@ def update_map(
         Input("ecdf", "selectedData"),
     ],
 )
-def update_production(
+def update_ecdf(
     amenity_select, ecdf_selectedData
     ):
     x_range = None
@@ -357,12 +377,15 @@ def update_production(
 
     if prop_id == 'ecdf' and prop_type == "selectedData":
         if ecdf_selectedData:
-            x_range = ecdf_selectedData['range']['x']
+            if 'range' in ecdf_selectedData:
+                x_range = ecdf_selectedData['range']['x']
+            else:
+                x_range = [ecdf_selectedData['points'][0]['x']]*2
 
     return generate_ecdf_plot(amenity_select, x_range)
 
 
 # Running the server
 if __name__ == "__main__":
-    # app.run_server(debug=True)
+    # app.run_server(debug=True, port=8051)
     app.run_server(port=8051)
