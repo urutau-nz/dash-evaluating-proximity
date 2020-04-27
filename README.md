@@ -1,5 +1,7 @@
 # Evaluating access to essential services
 
+Visit the dashboard [here](https://www.urutau.co.nz/apps/evaluate-proximity.html).  
+
 `dash-evaluating-proximity` is a simple dashboard enabling users to explore access to amenities in a city.
 Areas with poor access can be highlighted by selecting the data on the graph.
 This is developed using Dash and [Plotly](https//plot.ly/) and the template was modified from this [example](https://github.com/plotly/dash-sample-apps/tree/master/apps/dash-oil-gas-ternary).
