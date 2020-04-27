@@ -26,6 +26,7 @@ app = dash.Dash(
         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
     ],
     external_stylesheets=external_stylesheets,
+    url_base_pathname='/evaluate-proximity/',
 )
 server = app.server
 app.config["suppress_callback_exceptions"] = True
@@ -96,14 +97,9 @@ def generate_ecdf_plot(amenity_select, x_range=None):
     layout = dict(
         xaxis=dict(
             title="distance to nearest {} (km)".format(amenity_select).upper(),
-            # title_font=dict(font_size=30),
-            # tickfont=dict(font_size=14)
-            # tickfont=dict(color="white")
             ),
         yaxis=dict(
             title="% of residents".upper(),
-            # size=30
-            # tickfont=dict(color="white")
             ),
         font=dict(size=13),
         dragmode="select",
@@ -388,4 +384,4 @@ def update_ecdf(
 # Running the server
 if __name__ == "__main__":
     # app.run_server(debug=True, port=8051)
-    app.run_server(port=8051)
+    app.run_server(port=9004)
