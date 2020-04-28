@@ -371,7 +371,7 @@
     }
 
     #ecdf {
-        margin-left: -6.5rem;
+/*         margin-left: -6.5rem; */
     }
 
     #ecdf * {
@@ -432,7 +432,7 @@
 
     #ecdf {
         position: relative;
-        margin: -3rem 0 0 -6.5rem;
+/*         margin: -3rem 0 0 -6.5rem; */
         z-index: 1;
     }
 
