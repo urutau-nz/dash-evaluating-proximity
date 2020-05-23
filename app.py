@@ -26,7 +26,7 @@ app = dash.Dash(
         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
     ],
     external_stylesheets=external_stylesheets,
-    url_base_pathname='/evaluate-proximity/',
+    url_base_pathname='/proximity-baltimore/',
 )
 server = app.server
 app.config["suppress_callback_exceptions"] = True
@@ -277,7 +277,7 @@ app.layout = html.Div(
                             id="ecdf-container",
                             className="six columns",
                             children=[
-                                build_graph_title("Select to identify areas by their distance"),
+                                build_graph_title("Select a distance range"),
                                 dcc.Graph(id="ecdf",
                                     figure={
                                         "layout": {

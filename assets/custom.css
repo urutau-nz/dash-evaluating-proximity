@@ -229,7 +229,7 @@
 }
 
 #map-container {
-    margin: 0 -2rem 0 4rem;
+    margin: 0 0rem 0 4rem;
     flex-grow: 1;
 }
 
@@ -283,7 +283,7 @@
 
 @media (min-width: 1001px) {
     #map-container {
-        margin: 0 -2rem 0 4rem;
+        margin: 0 0rem 0 4rem;
     }
 
     #ternary-header {
