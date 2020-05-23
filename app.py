@@ -37,7 +37,7 @@ app.title = 'Evaluating proximity'
 mapbox_access_token = open(".mapbox_token").read()
 
 # Load data
-df_dist = pd.read_csv('./data/distance_to_nearest.csv',dtype={"geoid10": str})
+df_dist = pd.read_csv('./data/distance_to_nearest_md.csv',dtype={"geoid10": str})
 df_dist[amenities] = df_dist[amenities]/1000
 
 destinations = pd.read_csv('./data/destinations.csv')
@@ -89,56 +89,70 @@ def brush(trace, points, state):
                                       # we have 0 at the position of unselected
                                       # points and 1 in the position of selected points
 
-def generate_ecdf_plot(amenity_select, x_range=None):
+def generate_ecdf_plot(amenity_select, dff_dist, x_range=None):
     """
     :param amenity_select: the amenity of interest.
     :return: Figure object
     """
     amenity = amenity_select
+    if x_range is None:
+        x_range = [dff_dist[amenity].min(), dff_dist[amenity].max()]
+
 
     layout = dict(
         xaxis=dict(
-            title="distance to nearest {} (km)".format(amenity_select).upper(),
+            title="distance to nearest {} (km)".format(amenity).upper(),
+            # range=(0,15),
             ),
         yaxis=dict(
             title="% of residents".upper(),
+            range=(0,100),
+            fixedrange=True,
             ),
         font=dict(size=13),
         dragmode="select",
-        clickmode="event+select",
         paper_bgcolor = 'rgba(255,255,255,1)',
 		plot_bgcolor = 'rgba(0,0,0,0)',
+        bargap=0.05,
+        showlegend=False,
+        margin={'t': 10},
+        transition = {'duration': 500},
 
     )
-    dff = df_ecdf[df_ecdf.amenity==amenity]
-    dff = dff[dff.distance < dff.distance.quantile(.9998)]
-
     data = []
     # add the cdf for that amenity
-    new_trace = dict(
-        x=dff.distance,
-        y=dff.perc,
-        text=dff.amenity,
-        mode= 'markers',
-        marker_opacity=0.7,
-        marker_size=1,
-        hovermode='closest',
-        marker=dict(color=[colormap[amenity]]*len(dff)),
-        hovertemplate = "%{y:.2f}% of residents live within %{x:.1f}km of a %{text} <br>" + "<extra></extra>",
-        hoverlabel = dict(font_size=20),
-        # line=dict(shape="spline", color=colormap[amenity]),
-        # selectedpoints=idx,
-    )
+    counts, bin_edges = np.histogram(dff_dist[amenity], bins=100, density = True, weights=dff_dist.population)
+    dx = bin_edges[1] - bin_edges[0]
+    new_trace = go.Scatter(
+            x=bin_edges, y=np.cumsum(counts)*dx*100,
+            opacity=1,
+            line=dict(color=colormap[amenity],),
+            text=np.repeat(amenity,len(dff_dist[amenity])),
+            hovertemplate = "%{y:.1f}% of residents live within %{x:.1f}km of a %{text} <br>" + "<extra></extra>",
+            hoverlabel = dict(font_size=20),
+            )
+
     data.append(new_trace)
 
-    # update color for selection
-    if x_range:
-        # get the indices of the values within the specified range
-        idx = np.where(dff.distance.between(x_range[0],x_range[1], inclusive=True))[0]
-        for i in idx:
-            data[0]['marker']['color'][i] = 'black'
+    # histogram
+    multiplier = 300 if amenity=='supermarket' else 150
+    counts, bin_edges = np.histogram(dff_dist[amenity], bins=25, density=True, weights=dff_dist.population)
+    opacity = []
+    for i in bin_edges:
+        if i >= x_range[0] and i <= x_range[1]:
+            opacity.append(0.6)
+        else:
+            opacity.append(0.1)
+    new_trace = go.Bar(
+            x=bin_edges, y=counts*multiplier,
+            marker_opacity=opacity,
+            marker_color=colormap[amenity],
+            hoverinfo="skip", hovertemplate="",)
+    data.append(new_trace)
+
 
     return {"data": data, "layout": layout}
+
 
 
 def generate_map(amenity, dff_dest, x_range=None):
@@ -363,6 +377,11 @@ def update_ecdf(
     amenity_select, ecdf_selectedData
     ):
     x_range = None
+    # day = int(day)
+
+    # subset data
+    dff_dist = df_dist#[df_dist['service']==amenity_select]
+
     # Find which one has been triggered
     ctx = dash.callback_context
 
@@ -380,7 +399,7 @@ def update_ecdf(
             else:
                 x_range = [ecdf_selectedData['points'][0]['x']]*2
 
-    return generate_ecdf_plot(amenity_select, x_range)
+    return generate_ecdf_plot(amenity_select, dff_dist, x_range)
 
 
 # Running the server
